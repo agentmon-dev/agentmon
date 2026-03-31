@@ -1,21 +1,37 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { UsageAreaChart } from "@/components/charts/usage-area-chart";
+import { DistributionDonut } from "@/components/charts/distribution-donut";
+import { DailyBarChart } from "@/components/charts/daily-bar-chart";
+import { WhatIfCard } from "@/components/charts/what-if-card";
 
-async function getMetrics(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
-	const today = new Date();
+interface UsageRecord {
+	recorded_at: string;
+	agent: string;
+	project: string;
+	model: string;
+	input_tokens: number;
+	output_tokens: number;
+	cache_read_tokens: number;
+	estimated_cost_usd: string;
+}
+
+async function getDashboardData(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
+	const now = new Date();
+	const today = new Date(now);
 	today.setHours(0, 0, 0, 0);
-	const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+	const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+	const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-	const [todayData, monthData] = await Promise.all([
+	const [weekData, monthData] = await Promise.all([
 		supabase
 			.from("usage_records")
-			.select("input_tokens, output_tokens, estimated_cost_usd")
+			.select("*")
 			.eq("user_id", userId)
-			.gte("recorded_at", today.toISOString()),
+			.gte("recorded_at", weekAgo.toISOString())
+			.order("recorded_at", { ascending: true }),
 		supabase
 			.from("usage_records")
 			.select("estimated_cost_usd")
@@ -23,24 +39,74 @@ async function getMetrics(supabase: Awaited<ReturnType<typeof createClient>>, us
 			.gte("recorded_at", monthStart.toISOString()),
 	]);
 
-	const todayTokens = (todayData.data || []).reduce(
-		(sum, r) => sum + (r.input_tokens || 0) + (r.output_tokens || 0),
-		0,
-	);
-	const todayCost = (todayData.data || []).reduce(
-		(sum, r) => sum + (Number(r.estimated_cost_usd) || 0),
-		0,
-	);
-	const monthCost = (monthData.data || []).reduce(
-		(sum, r) => sum + (Number(r.estimated_cost_usd) || 0),
-		0,
-	);
+	const records: UsageRecord[] = weekData.data || [];
+	const todayRecords = records.filter((r) => new Date(r.recorded_at) >= today);
+
+	// KPI metrics
+	const todayTokens = todayRecords.reduce((s, r) => s + (r.input_tokens || 0) + (r.output_tokens || 0), 0);
+	const todayCost = todayRecords.reduce((s, r) => s + Number(r.estimated_cost_usd || 0), 0);
+	const monthCost = (monthData.data || []).reduce((s, r) => s + Number(r.estimated_cost_usd || 0), 0);
+
+	// Area chart: group by hour
+	const hourBuckets = new Map<string, { input: number; output: number; cacheRead: number }>();
+	for (const r of records) {
+		const d = new Date(r.recorded_at);
+		const key = `${(d.getMonth() + 1).toString().padStart(2, "0")}/${d.getDate().toString().padStart(2, "0")} ${d.getHours().toString().padStart(2, "0")}:00`;
+		const bucket = hourBuckets.get(key) || { input: 0, output: 0, cacheRead: 0 };
+		bucket.input += r.input_tokens || 0;
+		bucket.output += r.output_tokens || 0;
+		bucket.cacheRead += r.cache_read_tokens || 0;
+		hourBuckets.set(key, bucket);
+	}
+	const areaData = [...hourBuckets.entries()].map(([time, v]) => ({ time, ...v }));
+
+	// Donut: by agent
+	const agentMap = new Map<string, number>();
+	for (const r of records) {
+		agentMap.set(r.agent, (agentMap.get(r.agent) || 0) + (r.input_tokens || 0) + (r.output_tokens || 0));
+	}
+	const agentData = [...agentMap.entries()].map(([name, value]) => ({ name, value }));
+
+	// Donut: by project
+	const projectMap = new Map<string, number>();
+	for (const r of records) {
+		projectMap.set(r.project, (projectMap.get(r.project) || 0) + (r.input_tokens || 0) + (r.output_tokens || 0));
+	}
+	const projectData = [...projectMap.entries()]
+		.sort((a, b) => b[1] - a[1])
+		.slice(0, 5)
+		.map(([name, value]) => ({ name, value }));
+
+	// Donut: by model
+	const modelMap = new Map<string, number>();
+	for (const r of records) {
+		modelMap.set(r.model, (modelMap.get(r.model) || 0) + (r.input_tokens || 0) + (r.output_tokens || 0));
+	}
+	const modelData = [...modelMap.entries()].map(([name, value]) => ({ name, value }));
+
+	// Bar: daily cost
+	const dayMap = new Map<string, number>();
+	for (const r of records) {
+		const d = new Date(r.recorded_at);
+		const key = `${(d.getMonth() + 1)}/${d.getDate()}`;
+		dayMap.set(key, (dayMap.get(key) || 0) + Number(r.estimated_cost_usd || 0));
+	}
+	const dailyData = [...dayMap.entries()].map(([day, cost]) => ({
+		day,
+		cost: Math.round(cost * 100) / 100,
+	}));
 
 	return {
 		todayTokens,
 		todayCost: Math.round(todayCost * 100) / 100,
 		monthCost: Math.round(monthCost * 100) / 100,
-		todayRecords: todayData.data?.length || 0,
+		todayRecords: todayRecords.length,
+		areaData,
+		agentData,
+		projectData,
+		modelData,
+		dailyData,
+		hasData: records.length > 0,
 	};
 }
 
@@ -67,9 +133,7 @@ function EmptyState() {
 					Your daemon is collecting data. First results will appear within 5 minutes after
 					you start using an AI coding agent.
 				</p>
-				<code className="rounded-lg bg-muted px-4 py-2 font-mono text-sm">
-					agentmon status
-				</code>
+				<code className="rounded-lg bg-muted px-4 py-2 font-mono text-sm">agentmon status</code>
 			</CardContent>
 		</Card>
 	);
@@ -83,8 +147,7 @@ export default async function DashboardPage() {
 
 	if (!user) redirect("/auth/login");
 
-	const metrics = await getMetrics(supabase, user.id);
-	const hasData = metrics.todayRecords > 0 || metrics.monthCost > 0;
+	const d = await getDashboardData(supabase, user.id);
 
 	return (
 		<div className="p-6 max-w-6xl">
@@ -95,89 +158,56 @@ export default async function DashboardPage() {
 				</Badge>
 			</div>
 
-			{!hasData ? (
+			{!d.hasData ? (
 				<EmptyState />
 			) : (
 				<>
-					{/* Row 1: KPI Metrics */}
+					{/* Row 1: KPI */}
 					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-						<MetricCard
-							label="Today's tokens"
-							value={metrics.todayTokens.toLocaleString()}
-							sub="input + output"
-						/>
-						<MetricCard label="Today's cost" value={`$${metrics.todayCost.toFixed(2)}`} />
-						<MetricCard
-							label="Active sessions"
-							value={String(metrics.todayRecords)}
-							sub="5-min buckets"
-						/>
-						<MetricCard
-							label="This month"
-							value={`$${metrics.monthCost.toFixed(2)}`}
-							sub="cumulative"
-						/>
+						<MetricCard label="Today's tokens" value={d.todayTokens.toLocaleString()} sub="input + output" />
+						<MetricCard label="Today's cost" value={`$${d.todayCost.toFixed(2)}`} />
+						<MetricCard label="Active sessions" value={String(d.todayRecords)} sub="5-min buckets" />
+						<MetricCard label="This month" value={`$${d.monthCost.toFixed(2)}`} sub="cumulative" />
 					</div>
 
-					{/* Row 2: Area chart placeholder */}
+					{/* Row 2: Usage trend */}
 					<Card className="mb-8">
 						<CardHeader>
-							<CardTitle>Usage Trend</CardTitle>
+							<CardTitle>Usage Trend (last 7 days)</CardTitle>
 						</CardHeader>
-						<CardContent className="h-64 flex items-center justify-center text-muted-foreground">
-							Recharts AreaChart - connect to /api/usage
+						<CardContent>
+							<UsageAreaChart data={d.areaData} />
 						</CardContent>
 					</Card>
 
-					{/* Row 3: Donut charts */}
+					{/* Row 3: Distribution donuts */}
 					<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
 						<Card>
-							<CardHeader>
-								<CardTitle className="text-sm">By Agent</CardTitle>
-							</CardHeader>
-							<CardContent className="h-40 flex items-center justify-center text-muted-foreground text-sm">
-								Agent distribution
-							</CardContent>
+							<CardHeader><CardTitle className="text-sm">By Agent</CardTitle></CardHeader>
+							<CardContent><DistributionDonut data={d.agentData} title="Agent" /></CardContent>
 						</Card>
 						<Card>
-							<CardHeader>
-								<CardTitle className="text-sm">By Project</CardTitle>
-							</CardHeader>
-							<CardContent className="h-40 flex items-center justify-center text-muted-foreground text-sm">
-								Project distribution
-							</CardContent>
+							<CardHeader><CardTitle className="text-sm">By Project</CardTitle></CardHeader>
+							<CardContent><DistributionDonut data={d.projectData} title="Project" /></CardContent>
 						</Card>
 						<Card>
-							<CardHeader>
-								<CardTitle className="text-sm">By Model</CardTitle>
-							</CardHeader>
-							<CardContent className="h-40 flex items-center justify-center text-muted-foreground text-sm">
-								Model distribution
-							</CardContent>
+							<CardHeader><CardTitle className="text-sm">By Model</CardTitle></CardHeader>
+							<CardContent><DistributionDonut data={d.modelData} title="Model" /></CardContent>
 						</Card>
 					</div>
 
-					{/* Row 4: Bar chart */}
+					{/* Row 4: Daily cost */}
 					<Card className="mb-8">
 						<CardHeader>
-							<CardTitle>Daily Trend</CardTitle>
+							<CardTitle>Daily Cost</CardTitle>
 						</CardHeader>
-						<CardContent className="h-48 flex items-center justify-center text-muted-foreground">
-							Recharts BarChart - last 7 days
+						<CardContent>
+							<DailyBarChart data={d.dailyData} />
 						</CardContent>
 					</Card>
 
 					{/* Row 5: What if? */}
-					<Card>
-						<CardHeader>
-							<CardTitle>What if?</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<p className="text-sm text-muted-foreground">
-								Model cost simulation - select a target model to see potential savings
-							</p>
-						</CardContent>
-					</Card>
+					<WhatIfCard />
 				</>
 			)}
 		</div>
