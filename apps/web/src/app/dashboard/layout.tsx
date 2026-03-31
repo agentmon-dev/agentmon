@@ -17,7 +17,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 				{/* Sidebar */}
 				<aside className="w-60 border-r border-sidebar-border bg-sidebar flex flex-col">
 					<div className="p-4 border-b border-sidebar-border">
-						<Link href="/dashboard" className="font-serif text-lg font-bold text-sidebar-primary">
+						<Link href="/dashboard" className="text-lg font-bold text-sidebar-primary tracking-tight">
 							agentmon
 						</Link>
 					</div>

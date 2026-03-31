@@ -16,7 +16,7 @@ export default function LandingPage() {
 		<main className="min-h-screen">
 			{/* Nav */}
 			<nav className="flex items-center justify-between px-8 py-4 max-w-6xl mx-auto">
-				<span className="font-serif text-xl font-bold text-primary">agentmon</span>
+				<span className="text-xl font-bold text-primary tracking-tight">agentmon</span>
 				<div className="flex items-center gap-4 text-sm">
 					<Link href="/dashboard" className="hover:text-primary transition-colors">
 						Dashboard
