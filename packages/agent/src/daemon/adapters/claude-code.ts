@@ -83,6 +83,14 @@ export class ClaudeCodeAdapter implements AgentAdapter {
 				);
 			}
 
+			// Schema validation: warn on unexpected structure changes
+			if (!("model" in parsed)) {
+				console.warn("[claude-code] JSONL line missing 'model' field - agent format may have changed");
+			}
+			if (!("cache_read_input_tokens" in usage) && !("cache_creation_input_tokens" in usage)) {
+				console.warn("[claude-code] JSONL usage missing cache fields - agent format may have changed");
+			}
+
 			const model = (parsed.model as string) ?? "unknown";
 			const timestamp =
 				(parsed.timestamp as string) ??

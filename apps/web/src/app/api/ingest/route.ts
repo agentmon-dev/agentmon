@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const supabaseAdmin = createClient(
 	process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -44,6 +45,21 @@ export async function POST(request: NextRequest) {
 
 	if (keyRecord.revoked_at) {
 		return NextResponse.json({ ok: false, error: "API key has been revoked" }, { status: 401 });
+	}
+
+	// Rate limit: 60 requests per minute per API key
+	const { allowed, remaining, resetAt } = checkRateLimit(keyHash, 60, 60_000);
+	if (!allowed) {
+		return NextResponse.json(
+			{ ok: false, error: "Rate limit exceeded. Try again later." },
+			{
+				status: 429,
+				headers: {
+					"Retry-After": String(Math.ceil((resetAt - Date.now()) / 1000)),
+					"X-RateLimit-Remaining": "0",
+				},
+			},
+		);
 	}
 
 	// Update last_used_at

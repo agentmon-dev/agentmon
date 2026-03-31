@@ -11,13 +11,16 @@ import { aggregate, type AggregatedBucket } from "./daemon/aggregator.js";
 import { parseJSONLLines, type ParsedRecord } from "./daemon/parser.js";
 import { sendToServer, getLastSyncTime } from "./daemon/sender.js";
 import { watchJSONLFiles } from "./daemon/watcher.js";
+import { runInit } from "./commands/init.js";
 
 const args = process.argv.slice(2);
 const command = args[0];
 
 switch (command) {
 	case "init":
-		await runInit();
+		await runInit({
+			noBrowser: args.includes("--no-browser"),
+		});
 		break;
 	case "start":
 		await runStart();
@@ -37,12 +40,6 @@ Usage:
   agentmon stop      Stop the daemon
   agentmon status    Check daemon status and last sync
 `);
-}
-
-async function runInit(): Promise<void> {
-	console.log("agentmon init - coming soon");
-	console.log("This will open your browser for GitHub OAuth login,");
-	console.log("generate an API key, and register the background daemon.");
 }
 
 async function runStart(): Promise<void> {
