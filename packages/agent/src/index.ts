@@ -35,10 +35,11 @@ switch (command) {
 		console.log(`agentmon - AI coding agent token usage monitor
 
 Usage:
-  agentmon init      Set up agentmon (OAuth + API key + daemon)
-  agentmon start     Start the background daemon
-  agentmon stop      Stop the daemon
-  agentmon status    Check daemon status and last sync
+  agentmon init               Set up agentmon (OAuth + API key + daemon)
+  agentmon init --no-browser  Set up using device code (no browser needed)
+  agentmon start              Start the background daemon
+  agentmon stop               Stop the daemon
+  agentmon status             Check daemon status and last sync
 `);
 }
 
