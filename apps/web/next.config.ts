@@ -10,6 +10,6 @@ export default withSentryConfig(nextConfig, {
 	project: "agentmon-web",
 	silent: !process.env.CI,
 	widenClientFileUpload: true,
-	disableLogger: true,
 	tunnelRoute: "/monitoring",
+	authToken: process.env.SENTRY_AUTH_TOKEN,
 });
