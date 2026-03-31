@@ -1,0 +1,146 @@
+name: Publish CLI
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            target: bun-darwin-arm64
+            artifact: agentmon-darwin-arm64
+          - os: macos-13
+            target: bun-darwin-x64
+            artifact: agentmon-darwin-x64
+          - os: ubuntu-latest
+            target: bun-linux-x64
+            artifact: agentmon-linux-x64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: cd packages/agent && bun install
+
+      - name: Build binary
+        env:
+          BUILD_TARGET: ${{ matrix.target }}
+          ARTIFACT_NAME: ${{ matrix.artifact }}
+        run: |
+          cd packages/agent
+          bun build --compile --target="$BUILD_TARGET" --outfile "dist/$ARTIFACT_NAME" src/index.ts
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: packages/agent/dist/${{ matrix.artifact }}
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare npm packages
+        env:
+          GIT_TAG: ${{ github.ref_name }}
+        run: |
+          VERSION="${GIT_TAG#v}"
+
+          # Main package
+          mkdir -p npm/agentmon/bin
+          cat > npm/agentmon/package.json << PKGJSON
+          {
+            "name": "agentmon",
+            "version": "${VERSION}",
+            "description": "AI coding agent token usage monitor",
+            "bin": { "agentmon": "bin/agentmon.js" },
+            "optionalDependencies": {
+              "@agentmon/darwin-arm64": "${VERSION}",
+              "@agentmon/darwin-x64": "${VERSION}",
+              "@agentmon/linux-x64": "${VERSION}"
+            },
+            "repository": { "type": "git", "url": "https://github.com/agentmon-dev/agentmon" },
+            "license": "MIT",
+            "keywords": ["ai", "token", "usage", "monitor", "claude", "codex"]
+          }
+          PKGJSON
+
+          cat > npm/agentmon/bin/agentmon.js << 'LAUNCHER'
+          #!/usr/bin/env node
+          const { execFileSync } = require("child_process");
+          const path = require("path");
+          const os = require("os");
+          const platform = os.platform();
+          const arch = os.arch();
+          const pkgMap = {
+            "darwin-arm64": "@agentmon/darwin-arm64",
+            "darwin-x64": "@agentmon/darwin-x64",
+            "linux-x64": "@agentmon/linux-x64",
+          };
+          const key = `${platform}-${arch}`;
+          const pkg = pkgMap[key];
+          if (!pkg) { console.error(`agentmon: unsupported platform ${key}`); process.exit(1); }
+          try {
+            const binPath = path.join(require.resolve(`${pkg}/package.json`), "..", "bin", "agentmon");
+            execFileSync(binPath, process.argv.slice(2), { stdio: "inherit" });
+          } catch (e) {
+            if (e.status != null) process.exit(e.status);
+            console.error(`agentmon: failed to run binary for ${key}`, e.message);
+            process.exit(1);
+          }
+          LAUNCHER
+          chmod +x npm/agentmon/bin/agentmon.js
+
+          for PLAT in darwin-arm64 darwin-x64 linux-x64; do
+            PKG_NAME="@agentmon/${PLAT}"
+            DIR="npm/${PLAT}"
+            OS_NAME="${PLAT%%-*}"
+            CPU_NAME="${PLAT##*-}"
+            mkdir -p "${DIR}/bin"
+            cat > "${DIR}/package.json" << PLATJSON
+            {
+              "name": "${PKG_NAME}",
+              "version": "${VERSION}",
+              "os": ["${OS_NAME}"],
+              "cpu": ["${CPU_NAME}"],
+              "bin": { "agentmon": "bin/agentmon" },
+              "license": "MIT"
+            }
+          PLATJSON
+            cp "artifacts/agentmon-${PLAT}/agentmon-${PLAT}" "${DIR}/bin/agentmon"
+            chmod +x "${DIR}/bin/agentmon"
+          done
+
+      - name: Publish packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          for dir in npm/darwin-arm64 npm/darwin-x64 npm/linux-x64 npm/agentmon; do
+            cd "$dir"
+            npm publish --access public || true
+            cd -
+          done
