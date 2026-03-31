@@ -27,18 +27,18 @@ export function UsageAreaChart({ data }: { data: DataPoint[] }) {
 	if (data.length === 0) return null;
 
 	return (
-		<ChartContainer config={chartConfig} className="h-64 w-full">
+		<ChartContainer config={chartConfig} className="h-52 w-full">
 			<AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
 				<CartesianGrid vertical={false} />
-				<XAxis dataKey="time" tickLine={false} axisLine={false} fontSize={12} />
-				<YAxis tickLine={false} axisLine={false} fontSize={12} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+				<XAxis dataKey="time" tickLine={false} axisLine={false} fontSize={11} tick={{ fill: "var(--color-muted-foreground)" }} />
+				<YAxis tickLine={false} axisLine={false} fontSize={11} tick={{ fill: "var(--color-muted-foreground)" }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
 				<ChartTooltip content={<ChartTooltipContent />} />
 				<ChartLegend content={<ChartLegendContent />} />
 				<Area
 					dataKey="output"
 					type="monotone"
 					fill="var(--color-chart-1)"
-					fillOpacity={0.3}
+					fillOpacity={0.1}
 					stroke="var(--color-chart-1)"
 					stackId="tokens"
 				/>
@@ -46,7 +46,7 @@ export function UsageAreaChart({ data }: { data: DataPoint[] }) {
 					dataKey="input"
 					type="monotone"
 					fill="var(--color-chart-2)"
-					fillOpacity={0.3}
+					fillOpacity={0.1}
 					stroke="var(--color-chart-2)"
 					stackId="tokens"
 				/>
@@ -54,7 +54,7 @@ export function UsageAreaChart({ data }: { data: DataPoint[] }) {
 					dataKey="cacheRead"
 					type="monotone"
 					fill="var(--color-chart-3)"
-					fillOpacity={0.3}
+					fillOpacity={0.1}
 					stroke="var(--color-chart-3)"
 					stackId="tokens"
 				/>

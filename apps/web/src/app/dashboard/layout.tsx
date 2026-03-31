@@ -14,38 +14,37 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 	return (
 		<TooltipProvider>
 			<div className="flex min-h-screen">
-				{/* Sidebar */}
-				<aside className="w-60 border-r border-sidebar-border bg-sidebar flex flex-col">
-					<div className="p-4 border-b border-sidebar-border">
-						<Link href="/dashboard" className="text-lg font-bold text-sidebar-primary tracking-tight">
+				<aside className="w-52 border-r bg-sidebar flex flex-col">
+					<div className="px-4 py-3 border-b">
+						<Link href="/dashboard" className="text-sm font-semibold tracking-tight">
 							agentmon
 						</Link>
 					</div>
 
-					<nav className="flex-1 p-3 space-y-1">
+					<nav className="flex-1 p-2 space-y-0.5">
 						{NAV_ITEMS.map((item) => (
 							<Link
 								key={item.href}
 								href={item.href}
-								className="flex items-center rounded-lg px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+								className="flex items-center rounded-md px-2.5 py-1.5 text-[13px] text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
 							>
 								{item.label}
 							</Link>
 						))}
 
-						<Separator className="my-3" />
+						<Separator className="my-2" />
 
 						<Link
 							href="/org"
-							className="flex items-center rounded-lg px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+							className="flex items-center rounded-md px-2.5 py-1.5 text-[13px] text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
 						>
 							Organizations
 						</Link>
 					</nav>
 
-					<div className="p-3 border-t border-sidebar-border flex items-center justify-between">
+					<div className="px-3 py-2 border-t flex items-center justify-between">
 						<ThemeSwitcher />
-						<span className="text-xs text-muted-foreground">v0.1.0</span>
+						<span className="text-[11px] text-muted-foreground">v0.1.0</span>
 					</div>
 				</aside>
 

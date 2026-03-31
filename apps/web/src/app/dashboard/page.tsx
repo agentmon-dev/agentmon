@@ -113,12 +113,10 @@ async function getDashboardData(supabase: Awaited<ReturnType<typeof createClient
 function MetricCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
 	return (
 		<Card>
-			<CardHeader className="pb-2">
-				<CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
-			</CardHeader>
-			<CardContent>
-				<p className="text-2xl font-bold">{value}</p>
-				{sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
+			<CardContent className="pt-4 pb-3 px-4">
+				<p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{label}</p>
+				<p className="text-xl font-semibold mt-0.5 tabular-nums">{value}</p>
+				{sub && <p className="text-[11px] text-muted-foreground mt-0.5">{sub}</p>}
 			</CardContent>
 		</Card>
 	);
@@ -150,12 +148,12 @@ export default async function DashboardPage() {
 	const d = await getDashboardData(supabase, user.id);
 
 	return (
-		<div className="p-6 max-w-6xl">
-			<div className="flex items-center justify-between mb-6">
-				<h1 className="text-2xl font-bold">Dashboard</h1>
-				<Badge variant="secondary" className="text-xs">
+		<div className="p-4 max-w-6xl">
+			<div className="flex items-center justify-between mb-4">
+				<h1 className="text-lg font-semibold">Overview</h1>
+				<span className="text-[11px] text-muted-foreground">
 					* Input tokens may be underreported
-				</Badge>
+				</span>
 			</div>
 
 			{!d.hasData ? (
@@ -163,7 +161,7 @@ export default async function DashboardPage() {
 			) : (
 				<>
 					{/* Row 1: KPI */}
-					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
 						<MetricCard label="Today's tokens" value={d.todayTokens.toLocaleString()} sub="input + output" />
 						<MetricCard label="Today's cost" value={`$${d.todayCost.toFixed(2)}`} />
 						<MetricCard label="Active sessions" value={String(d.todayRecords)} sub="5-min buckets" />
@@ -181,7 +179,7 @@ export default async function DashboardPage() {
 					</Card>
 
 					{/* Row 3: Distribution donuts */}
-					<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+					<div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
 						<Card>
 							<CardHeader><CardTitle className="text-sm">By Agent</CardTitle></CardHeader>
 							<CardContent><DistributionDonut data={d.agentData} title="Agent" /></CardContent>
