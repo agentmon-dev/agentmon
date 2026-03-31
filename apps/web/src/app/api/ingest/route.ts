@@ -3,10 +3,12 @@ import { createHash } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { checkRateLimit } from "@/lib/rate-limit";
 
-const supabaseAdmin = createClient(
-	process.env.NEXT_PUBLIC_SUPABASE_URL!,
-	process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
+function getSupabaseAdmin() {
+	return createClient(
+		process.env.NEXT_PUBLIC_SUPABASE_URL!,
+		process.env.SUPABASE_SERVICE_ROLE_KEY!,
+	);
+}
 
 interface IngestRecord {
 	recorded_at: string;
@@ -33,7 +35,7 @@ export async function POST(request: NextRequest) {
 
 	// Hash the key and look up
 	const keyHash = createHash("sha256").update(apiKey).digest("hex");
-	const { data: keyRecord, error: keyError } = await supabaseAdmin
+	const { data: keyRecord, error: keyError } = await getSupabaseAdmin()
 		.from("api_keys")
 		.select("user_id, revoked_at")
 		.eq("key_hash", keyHash)
@@ -63,7 +65,7 @@ export async function POST(request: NextRequest) {
 	}
 
 	// Update last_used_at
-	await supabaseAdmin
+	await getSupabaseAdmin()
 		.from("api_keys")
 		.update({ last_used_at: new Date().toISOString() })
 		.eq("key_hash", keyHash);
@@ -94,7 +96,7 @@ export async function POST(request: NextRequest) {
 		estimated_cost_usd: r.estimated_cost_usd,
 	}));
 
-	const { error: insertError } = await supabaseAdmin
+	const { error: insertError } = await getSupabaseAdmin()
 		.from("usage_records")
 		.upsert(rows, {
 			onConflict: "user_id,recorded_at,agent,project,model",
