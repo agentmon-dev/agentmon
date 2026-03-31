@@ -1,6 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 interface ApiKey {
 	id: string;
@@ -53,88 +57,84 @@ export default function SettingsPage() {
 		<div className="p-6 max-w-2xl">
 			<h1 className="text-2xl font-bold mb-6">Settings</h1>
 
-			<section>
-				<h2 className="text-lg font-semibold mb-4">API Keys</h2>
-
-				{/* New key warning */}
-				{newKeyValue && (
-					<div className="mb-4 rounded-lg border-2 border-[hsl(var(--destructive))] p-4">
-						<p className="text-sm font-medium mb-2">
-							Save this key now. It will not be shown again.
-						</p>
-						<code className="block rounded bg-[hsl(var(--muted))] p-3 text-sm font-mono break-all">
-							{newKeyValue}
-						</code>
-						<button
-							type="button"
-							onClick={() => {
-								navigator.clipboard.writeText(newKeyValue);
-							}}
-							className="mt-2 text-xs text-[hsl(var(--primary))] hover:underline"
-						>
-							Copy to clipboard
-						</button>
-						<button
-							type="button"
-							onClick={() => setNewKeyValue(null)}
-							className="mt-2 ml-4 text-xs text-[hsl(var(--muted-foreground))] hover:underline"
-						>
-							Dismiss
-						</button>
-					</div>
-				)}
-
-				{/* Create form */}
-				<form onSubmit={createKey} className="flex gap-2 mb-6">
-					<input
-						type="text"
-						value={newKeyName}
-						onChange={(e) => setNewKeyName(e.target.value)}
-						placeholder="Key name (e.g. macbook-pro)"
-						className="flex-1 rounded-md border border-[hsl(var(--input))] bg-transparent px-3 py-2 text-sm"
-					/>
-					<button
-						type="submit"
-						disabled={loading}
-						className="rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm text-[hsl(var(--primary-foreground))] hover:opacity-90 disabled:opacity-50"
-					>
-						Create key
-					</button>
-				</form>
-
-				{/* Key list */}
-				<div className="space-y-2">
-					{keys.map((key) => (
-						<div
-							key={key.id}
-							className="flex items-center justify-between rounded-lg border border-[hsl(var(--border))] p-3"
-						>
-							<div>
-								<span className="text-sm font-medium">{key.name}</span>
-								<span className="ml-2 text-xs text-[hsl(var(--muted-foreground))]">
-									{key.revoked_at ? "Revoked" : key.last_used_at
-										? `Last used ${new Date(key.last_used_at).toLocaleDateString()}`
-										: "Never used"}
-								</span>
-							</div>
-							{!key.revoked_at && (
-								<button
-									type="button"
-									onClick={() => revokeKey(key.id)}
-									className="text-xs text-[hsl(var(--destructive))] hover:underline"
-								>
-									Revoke
-								</button>
-							)}
-						</div>
-					))}
-					{keys.length === 0 && (
-						<p className="text-sm text-[hsl(var(--muted-foreground))] text-center py-4">
-							No API keys yet. Create one to start collecting data.
-						</p>
+			<Card>
+				<CardHeader>
+					<CardTitle>API Keys</CardTitle>
+				</CardHeader>
+				<CardContent className="space-y-4">
+					{/* New key warning */}
+					{newKeyValue && (
+						<Card className="border-destructive border-2">
+							<CardContent className="pt-4">
+								<p className="text-sm font-medium mb-2">
+									Save this key now. It will not be shown again.
+								</p>
+								<code className="block rounded-lg bg-muted p-3 text-sm font-mono break-all">
+									{newKeyValue}
+								</code>
+								<div className="flex gap-2 mt-3">
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => navigator.clipboard.writeText(newKeyValue)}
+									>
+										Copy
+									</Button>
+									<Button variant="ghost" size="sm" onClick={() => setNewKeyValue(null)}>
+										Dismiss
+									</Button>
+								</div>
+							</CardContent>
+						</Card>
 					)}
-				</div>
-			</section>
+
+					{/* Create form */}
+					<form onSubmit={createKey} className="flex gap-2">
+						<Input
+							value={newKeyName}
+							onChange={(e) => setNewKeyName(e.target.value)}
+							placeholder="Key name (e.g. macbook-pro)"
+							className="flex-1"
+						/>
+						<Button type="submit" disabled={loading}>
+							{loading ? "Creating..." : "Create key"}
+						</Button>
+					</form>
+
+					{/* Key list */}
+					<div className="space-y-2">
+						{keys.map((key) => (
+							<div
+								key={key.id}
+								className="flex items-center justify-between rounded-lg border p-3"
+							>
+								<div className="flex items-center gap-2">
+									<span className="text-sm font-medium">{key.name}</span>
+									{key.revoked_at ? (
+										<Badge variant="destructive">Revoked</Badge>
+									) : (
+										<Badge variant="secondary">
+											{key.last_used_at
+												? `Used ${new Date(key.last_used_at).toLocaleDateString()}`
+												: "Never used"}
+										</Badge>
+									)}
+								</div>
+								{!key.revoked_at && (
+									<Button variant="ghost" size="sm" onClick={() => revokeKey(key.id)}>
+										Revoke
+									</Button>
+								)}
+							</div>
+						))}
+						{keys.length === 0 && (
+							<p className="text-sm text-muted-foreground text-center py-4">
+								No API keys yet. Create one to start collecting data.
+							</p>
+						)}
+					</div>
+				</CardContent>
+			</Card>
 		</div>
 	);
 }

@@ -3,6 +3,8 @@
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 function LoginForm() {
 	const searchParams = useSearchParams();
@@ -20,19 +22,19 @@ function LoginForm() {
 
 	return (
 		<main className="flex min-h-screen items-center justify-center">
-			<div className="text-center">
-				<h1 className="text-3xl font-bold mb-2">Sign in to agentmon</h1>
-				<p className="text-[hsl(var(--muted-foreground))] mb-8">
-					Monitor your AI coding agent token usage
-				</p>
-				<button
-					type="button"
-					onClick={handleLogin}
-					className="rounded-md bg-[hsl(var(--foreground))] px-6 py-3 text-[hsl(var(--background))] hover:opacity-90 transition-opacity"
-				>
-					Continue with GitHub
-				</button>
-			</div>
+			<Card className="w-full max-w-sm">
+				<CardHeader className="text-center">
+					<CardTitle className="text-2xl">Sign in to agentmon</CardTitle>
+					<p className="text-sm text-muted-foreground">
+						Monitor your AI coding agent token usage
+					</p>
+				</CardHeader>
+				<CardContent>
+					<Button onClick={handleLogin} className="w-full" size="lg">
+						Continue with GitHub
+					</Button>
+				</CardContent>
+			</Card>
 		</main>
 	);
 }
