@@ -1,0 +1,30 @@
+{
+  "name": "@agentmon/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "biome check src/"
+  },
+  "dependencies": {
+    "@agentmon/shared": "workspace:*",
+    "@supabase/supabase-js": "^2",
+    "@supabase/ssr": "^0",
+    "next": "^16",
+    "next-themes": "^0.4",
+    "react": "^19",
+    "react-dom": "^19",
+    "recharts": "^2"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^5",
+    "tailwindcss": "^4",
+    "@tailwindcss/postcss": "^4"
+  }
+}

@@ -529,6 +529,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 ## 코딩 컨벤션
 
 - **언어**: TypeScript strict 모드
+- **패키지 매니저**: pnpm (워크스페이스 모노레포)
+- **모노레포**: Turborepo
 - **런타임**: CLI 에이전트는 Bun, Next.js는 Node.js
 - **포매터**: Biome (Prettier/ESLint 아님)
 - **임포트**: Next.js에서 `@/` 별칭으로 `src/` 참조

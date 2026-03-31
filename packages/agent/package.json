@@ -1,0 +1,18 @@
+{
+  "name": "@agentmon/agent",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "build": "bun build --compile --outfile dist/agentmon src/index.ts",
+    "lint": "biome check src/"
+  },
+  "dependencies": {
+    "@agentmon/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "^1",
+    "typescript": "^5"
+  }
+}
